@@ -78,36 +78,57 @@ public class WalletService {
     }
 
 
-//    @Transactional
-//    public Wallet topUp(Long walletId, BigDecimal amount, String referenceId) {
-//        Wallet[] wallets = lockWalletsInOrder(walletId, 999L);
-//
-//        Wallet userWallet = wallets[0].getId().equals(walletId)
-//                ? wallets[0]
-//                : wallets[1];
-//
-//        Wallet systemWallet = wallets[0].getId().equals(999L)
-//                ? wallets[0]
-//                : wallets[1];
-//
-//        try {
-//            transactionRepository.save(new WalletTransaction(systemWallet,
-//                    amount.negate(), "DEBIT", referenceId));
-//
-//            transactionRepository.save(new WalletTransaction(userWallet,
-//                    amount, "CREDIT", referenceId));
-//
-//            userWallet.setBalance(userWallet.getBalance().add(amount));
-//            systemWallet.setBalance(systemWallet.getBalance().subtract(amount));
-//
-//            walletRepository.save(userWallet);
-//            walletRepository.save(systemWallet);
-//
-//            return userWallet;
-//        } catch (DataIntegrityViolationException e) {
-//            return userWallet;
-//        }
-//    }
+    @Transactional
+    public Wallet bonus(Long walletId, BigDecimal amount, String referenceId) {
+        int retries = 3;
+
+        while (retries-- > 0) {
+            try {
+                return performBonus(walletId, amount, referenceId);
+            } catch (org.springframework.dao.DeadlockLoserDataAccessException e) {
+                if (retries == 0) throw e;
+            }
+        }
+        throw new RuntimeException("Deadlock retry failed");
+    }
+
+    @Transactional
+    public Wallet performBonus(Long walletId, BigDecimal amount, String referenceId) {
+
+        Wallet[] wallets = lockWalletsInOrder(walletId, 999L);
+
+        Wallet userWallet = wallets[0].getId().equals(walletId)
+                ? wallets[0]
+                : wallets[1];
+
+        Wallet systemWallet = wallets[0].getId().equals(999L)
+                ? wallets[0]
+                : wallets[1];
+
+        try {
+            transactionRepository.save(new WalletTransaction(systemWallet,
+                    amount.negate(), "BONUS_DEBIT", referenceId));
+
+            transactionRepository.save(new WalletTransaction(userWallet,
+                    amount, "BONUS_CREDIT", referenceId));
+
+            userWallet.setBalance(userWallet.getBalance().add(amount));
+            systemWallet.setBalance(systemWallet.getBalance().subtract(amount));
+
+            walletRepository.save(userWallet);
+            walletRepository.save(systemWallet);
+
+            BigDecimal ledgerBalance = calculateBalanceFromLedger(userWallet);
+            userWallet.setBalance(ledgerBalance);
+            walletRepository.save(userWallet);
+
+            return userWallet;
+
+        } catch (DataIntegrityViolationException e) {
+            return userWallet;
+        }
+    }
+
 
     @Transactional
     public Wallet spend(Long walletId, BigDecimal amount, String referenceId) {

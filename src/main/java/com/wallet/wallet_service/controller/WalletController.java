@@ -50,9 +50,7 @@ public class WalletController {
     public Wallet bonus(@PathVariable Long walletId,
                         @RequestParam BigDecimal amount,
                         @RequestParam String ref) {
-        Wallet wallet = walletRepository.findById(walletId).orElseThrow();
-        return walletService.topUp(walletId, amount, ref);
-
+        return walletService.bonus(walletId, amount, ref);
     }
 
     @PostMapping("/{walletId}/spend")
