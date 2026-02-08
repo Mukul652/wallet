@@ -67,8 +67,10 @@ Double-entry ledger model:
 ## Main APIs
 
 ```
-GET  /wallet/{walletId}                 → Check balance
-POST /wallet/{walletId}/topup           → Add credits
-POST /wallet/{walletId}/spend           → Spend credits
-GET  /wallet/{walletId}/transactions    → Transaction history
+GET  /wallet/{walletId}                       -> Check balance
+POST /wallet/{walletId}/topup                 ->  Add credits
+POST /wallet/{walletId}/spend                 -> Spend credits
+GET  /wallet/{walletId}/transactions          -> Transaction history
+POST /wallet/{walletId}/bonus?amount=X&ref=ID -> Bonus
+
 ```
